@@ -35,11 +35,22 @@ RM_ENV=development FLASK_APP=src.review.app flask run
 ```
 
 Open the URL Flask prints. Each card is one drafted recommendation: edit
-the text, pick a channel, **Approve**, then **Send / mark sent**. For
-`email` this attempts a real (consent-gated) send once `RM_ENV=production`
-and `RM_CONFIRM_PRODUCTION=yes` are both set; anywhere else it's a
-dry-run. For `linkedin`/`whatsapp`/`imessage` there is no automated send —
-the button only records that the owner sent the message themselves.
+the text, pick a channel, **Approve**, then **Send / mark sent** — or
+**Archive** if it shouldn't go out at all (wrong evidence, wrong person,
+no longer relevant). Archiving is available at any stage (suggested,
+in_review, or approved) and removes the record from the queue for good;
+it will not be re-suggested later. For `email`, Send attempts a real
+(consent-gated) send once `RM_ENV=production` and
+`RM_CONFIRM_PRODUCTION=yes` are both set; anywhere else it's a dry-run.
+For `linkedin`/`whatsapp`/`imessage` there is no automated send — the
+button only records that the owner sent the message themselves.
+
+This is a local development server: it only runs while that command is
+running in a terminal on your machine, and only you (whoever has that
+terminal open) can open the URL. It is not currently deployed anywhere
+persistent, so there's no shared link a teammate could open. If you want
+it always-on with its own URL, that's a separate deployment step (e.g. a
+small hosted server) that hasn't been set up yet.
 
 ## Rollback
 
