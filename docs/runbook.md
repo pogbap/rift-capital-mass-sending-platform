@@ -25,6 +25,22 @@ python -m src.workers.cadence_worker --live
 Missing any one of these causes the worker to run in dry-run mode and log
 a warning rather than fail silently.
 
+## Running the review platform
+
+The review app is how an owner actually turns a draft into a sent message
+— nothing sends without it.
+
+```bash
+RM_ENV=development FLASK_APP=src.review.app flask run
+```
+
+Open the URL Flask prints. Each card is one drafted recommendation: edit
+the text, pick a channel, **Approve**, then **Send / mark sent**. For
+`email` this attempts a real (consent-gated) send once `RM_ENV=production`
+and `RM_CONFIRM_PRODUCTION=yes` are both set; anywhere else it's a
+dry-run. For `linkedin`/`whatsapp`/`imessage` there is no automated send —
+the button only records that the owner sent the message themselves.
+
 ## Rollback
 
 - The worker only ever writes `suggested`-status recommendations and
