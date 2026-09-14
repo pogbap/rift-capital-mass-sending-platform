@@ -114,6 +114,23 @@ def approve(client: AttioClient, record_id: str, *, dry_run: bool = True) -> dic
     return client.update_record(QUEUE_OBJECT, record_id, attributes)
 
 
+def archive(client: AttioClient, record_id: str, *, dry_run: bool = True) -> dict:
+    """
+    Owner decided this draft shouldn't go out at all — bad evidence, wrong
+    person, no longer relevant. Moves the record to `archived` so it drops
+    out of the queue for good (unlike a plain "no thanks" it will not be
+    re-suggested by a later run against the same evidence). This is a
+    review decision only: it never touches Mailchimp/consent state, and it
+    is available regardless of the record's current status (suggested,
+    in_review, or approved can all be archived instead of sent).
+    """
+    attributes = {PEOPLE_FIELDS["outreach_status"]: "archived"}
+    if dry_run:
+        logger.info("[dry-run] would archive %s", record_id)
+        return {"dry_run": True, "record_id": record_id, "attributes": attributes}
+    return client.update_record(QUEUE_OBJECT, record_id, attributes)
+
+
 def _live_writes_allowed() -> bool:
     """
     Same production gate as the cadence worker: an actual send requires
