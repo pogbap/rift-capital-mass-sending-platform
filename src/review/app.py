@@ -26,6 +26,7 @@ from src.review.queue import (
     MANUAL_CHANNELS,
     SendNotAllowedError,
     approve,
+    archive,
     confirm_manual_send,
     list_queue,
     save_draft,
@@ -81,6 +82,7 @@ PAGE_TEMPLATE = """
       <button onclick="saveDraft('{{ item.record_id }}')">Save edit</button>
       <button class="primary" onclick="approveItem('{{ item.record_id }}')">Approve</button>
       <button class="primary" onclick="sendItem('{{ item.record_id }}')">Send / mark sent</button>
+      <button class="danger" onclick="archiveItem('{{ item.record_id }}')">Archive</button>
     </div>
   </div>
   {% endfor %}
@@ -106,6 +108,11 @@ PAGE_TEMPLATE = """
       if (!confirm('Send/confirm on channel: ' + channel + '?')) return;
       const res = await post('/api/queue/' + id + '/send', {channel});
       if (res) { alert(res.message || 'Done.'); location.reload(); }
+    }
+    async function archiveItem(id) {
+      if (!confirm('Archive this draft? It will not be re-suggested and nothing will be sent.')) return;
+      const res = await post('/api/queue/' + id + '/archive', {});
+      if (res) { alert('Archived.'); location.reload(); }
     }
   </script>
 </body>
@@ -149,6 +156,12 @@ def api_save(record_id: str):
 @app.route("/api/queue/<record_id>/approve", methods=["POST"])
 def api_approve(record_id: str):
     result = approve(get_client(), record_id, dry_run=False)
+    return jsonify({"ok": True, "result": result})
+
+
+@app.route("/api/queue/<record_id>/archive", methods=["POST"])
+def api_archive(record_id: str):
+    result = archive(get_client(), record_id, dry_run=False)
     return jsonify({"ok": True, "result": result})
 
 
