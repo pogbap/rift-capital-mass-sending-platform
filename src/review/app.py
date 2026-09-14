@@ -2,7 +2,7 @@
 Review platform: the human-in-the-loop web UI. Every message the cadence
 worker drafts lands here first — an owner reads it, rewrites it if they
 want, picks the channel, and only THEIR click sends anything (email) or
-records that they sent it themselves (LinkedIn/WhatsApp/iMessage). Nothing
+records that they sent it themselves (LinkedIn/WhatsApp/Telegram). Nothing
 in this codebase sends automatically; this app is the one and only front
 door for turning a draft into an actual outreach.
 
@@ -64,7 +64,7 @@ PAGE_TEMPLATE = """
   <h1>Outreach review queue</h1>
   <p>Every draft below was proposed automatically from recorded evidence — none of it has been
   sent. Edit anything you like, pick the channel, approve it, then send it (email) or confirm you
-  sent it yourself (LinkedIn / WhatsApp / iMessage). Nothing here ever sends on its own.</p>
+  sent it yourself (LinkedIn / WhatsApp / Telegram). Nothing here ever sends on its own.</p>
   {% if not items %}
     <p class="empty">Nothing waiting on you right now.</p>
   {% endif %}

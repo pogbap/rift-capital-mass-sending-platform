@@ -8,7 +8,7 @@ through a human, on every channel, via the functions in this module.
 Design intent (see RELATIONSHIP_MANAGER_ATTIO_HANDOFF.md and
 docs/architecture.md): the owner sees each drafted message, can rewrite it
 freely, picks which channel to use, and only then triggers a send (email)
-or confirms they sent it themselves (LinkedIn/WhatsApp/iMessage — this
+or confirms they sent it themselves (LinkedIn/WhatsApp/Telegram — this
 system has no API access to those and never will). There is intentionally
 no "send all" or bulk-approve function.
 """
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 QUEUE_OBJECT = "people"
 QUEUE_STATUSES = ("suggested", "in_review", "approved")
-MANUAL_CHANNELS = ("linkedin", "whatsapp", "imessage")
+MANUAL_CHANNELS = ("linkedin", "whatsapp", "telegram")
 
 
 class SendNotAllowedError(RuntimeError):
@@ -178,7 +178,7 @@ def confirm_manual_send(
     dry_run: bool | None = None,
 ) -> dict:
     """
-    For LinkedIn/WhatsApp/iMessage: this system cannot send on your behalf
+    For LinkedIn/WhatsApp/Telegram: this system cannot send on your behalf
     and never will. This records that YOU sent the approved (and possibly
     rewritten) message yourself, on the channel you chose. Calling this
     without having actually sent the message is on the owner, not the
