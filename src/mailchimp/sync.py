@@ -57,8 +57,8 @@ def enroll(
 
     Refuses unless ALL of these hold:
       - marketing_consent is recorded True on the Attio record
-      - person.marketing_audience names an approved segment (matches audience_id's
-        expected segment, passed by the caller after checking approval)
+      - audience_id is provided by the caller (the audience is never read
+        off the Person record — it comes from the caller/an env var)
       - eligibility is not suppressed / do-not-contact
       - the RM_MAILCHIMP_ENROLL_ENABLED feature flag is on
 
@@ -78,9 +78,9 @@ def enroll(
             f"{person.record_id} has no recorded marketing_consent; refusing to enroll"
         )
 
-    if not person.marketing_audience:
+    if not audience_id:
         raise ConsentError(
-            f"{person.record_id} has no approved marketing_audience segment; refusing to enroll"
+            f"{person.record_id} enrollment requires an approved audience_id from the caller"
         )
 
     if not email or "@" not in email:
@@ -90,7 +90,6 @@ def enroll(
         "email_address": email,
         "status_if_new": "subscribed",
         "merge_fields": {"FNAME": person.name.split(" ")[0] if person.name else ""},
-        "tags": [person.marketing_audience],
     }
 
     if dry_run:
