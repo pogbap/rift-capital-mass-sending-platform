@@ -46,8 +46,16 @@ def _get_value(values: dict, slug: str) -> Any:
     if not entries:
         return None
     entry = entries[0]
+    # Select/status attributes wrap their value as {"option": {"id":..., "title":...}}
+    # (or {"status": {...}} for status-type attributes) — unwrap to the plain
+    # title string so callers can compare it directly (e.g. `== "approved"`,
+    # `in OUTREACH_STAGE_SUPPRESSING`) instead of getting the raw option dict.
+    for wrapper_key in ("option", "status"):
+        wrapper = entry.get(wrapper_key)
+        if isinstance(wrapper, dict) and "title" in wrapper:
+            return wrapper["title"]
     # Attio attribute values are typed wrappers; pull the common shapes.
-    for key in ("value", "option", "text", "date", "referenced_actor_id"):
+    for key in ("value", "text", "date", "referenced_actor_id"):
         if key in entry:
             return entry[key]
     return entry
