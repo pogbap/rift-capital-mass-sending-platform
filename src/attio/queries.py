@@ -14,6 +14,7 @@ from typing import Any
 from src.attio.client import AttioClient
 from src.attio.schema import (
     ACTIVE_DRAFT_STATUSES,
+    OUTREACH_STAGE_SUPPRESSING,
     PEOPLE_FIELDS,
 )
 
@@ -27,19 +28,17 @@ class Person:
     record_id: str
     name: str
     owner: str | None
-    tier: str | None
-    eligibility: str | None
+    do_not_contact: bool
+    outreach_stage: str | None
     last_meaningful_interaction: dt.datetime | None
     outreach_status: str | None
-    suppression_reason: str | None
     marketing_consent: bool
-    marketing_audience: str | None
     preferred_channel: str | None
     raw: dict = field(default_factory=dict)
 
     @property
     def is_suppressed(self) -> bool:
-        return bool(self.suppression_reason) or self.eligibility == "do_not_contact"
+        return bool(self.do_not_contact) or self.outreach_stage in OUTREACH_STAGE_SUPPRESSING
 
 
 def _get_value(values: dict, slug: str) -> Any:
@@ -60,15 +59,13 @@ def _parse_person(record: dict) -> Person:
         record_id=record["id"]["record_id"],
         name=_get_value(values, "name") or "(unnamed)",
         owner=_get_value(values, PEOPLE_FIELDS["relationship_owner"]),
-        tier=_get_value(values, PEOPLE_FIELDS["relationship_tier"]),
-        eligibility=_get_value(values, PEOPLE_FIELDS["outreach_eligibility"]),
+        do_not_contact=bool(_get_value(values, PEOPLE_FIELDS["do_not_contact"])),
+        outreach_stage=_get_value(values, PEOPLE_FIELDS["outreach_stage"]),
         last_meaningful_interaction=_parse_date(
             _get_value(values, PEOPLE_FIELDS["last_meaningful_interaction"])
         ),
         outreach_status=_get_value(values, PEOPLE_FIELDS["outreach_status"]),
-        suppression_reason=_get_value(values, PEOPLE_FIELDS["suppression_reason"]),
         marketing_consent=bool(_get_value(values, PEOPLE_FIELDS["marketing_consent"])),
-        marketing_audience=_get_value(values, PEOPLE_FIELDS["marketing_audience"]),
         preferred_channel=_get_value(values, PEOPLE_FIELDS["preferred_channel"]),
         raw=record,
     )
@@ -96,7 +93,7 @@ def eligible_people(client: AttioClient, limit: int = 200) -> list[Person]:
         "filter": {
             "$and": [
                 {PEOPLE_FIELDS["relationship_owner"]: {"$is_not_empty": True}},
-                {PEOPLE_FIELDS["outreach_eligibility"]: {"$eq": "eligible"}},
+                {PEOPLE_FIELDS["do_not_contact"]: {"$eq": False}},
                 {
                     PEOPLE_FIELDS["outreach_status"]: {
                         "$not_in": list(ACTIVE_DRAFT_STATUSES)
@@ -165,7 +162,7 @@ def mark_sent(
 ) -> dict:
     """
     The only way a record can reach `sent` for a manual channel
-    (LinkedIn/WhatsApp/iMessage). Refuses unless the caller explicitly
+    (LinkedIn/WhatsApp/Telegram). Refuses unless the caller explicitly
     confirms a human sent it — there is intentionally no automated path
     that can set this.
     """
@@ -176,7 +173,6 @@ def mark_sent(
         )
     attributes = {
         PEOPLE_FIELDS["outreach_status"]: "sent",
-        PEOPLE_FIELDS["approved_send_channel"]: channel,
     }
     if dry_run:
         logger.info("[dry-run] would mark %s sent via %s", person.record_id, channel)
@@ -193,8 +189,7 @@ def suppress(
 ) -> dict:
     """Immediately suppresses a person, e.g. on bounce/unsubscribe/complaint."""
     attributes = {
-        PEOPLE_FIELDS["suppression_reason"]: reason,
-        PEOPLE_FIELDS["outreach_eligibility"]: "do_not_contact",
+        PEOPLE_FIELDS["do_not_contact"]: True,
     }
     if dry_run:
         logger.info("[dry-run] would suppress %s: %s", record_id, reason)
