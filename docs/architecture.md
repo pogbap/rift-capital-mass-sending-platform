@@ -21,7 +21,7 @@ Review platform (src/review — Flask app, single front door for all sends)
 • every drafted message is read, freely rewritten, and channel-picked by a human
 • "Send" is the only way a message leaves this system; nothing is ever automatic
 • email → dispatched through mailchimp/sync.py, still fully consent-gated
-• LinkedIn/WhatsApp/iMessage → owner sends it themselves, then confirms in the app
+• LinkedIn/WhatsApp/Telegram → owner sends it themselves, then confirms in the app
 │
 ├── consented commercial segment ─► Mailchimp ─► marketing delivery
 ├── owner-approved warm follow-up ─► Attio Sequences ─► email delivery
@@ -42,15 +42,16 @@ Delivery reconciliation
 | Unipile (optional) | Enrich a missing, high-confidence LinkedIn/email field | Write ambiguous matches or act as the outreach sender |
 | Mailchimp | Deliver permissioned marketing campaigns, manage audience status and unsubscribes | Become the CRM or receive unconsented CRM/enrichment contacts |
 | Transactional provider | Deliver one-to-one operational messages from a product or business event | Send promotional marketing to unconsented contacts |
-| Native social apps | Final LinkedIn/WhatsApp/iMessage sending | Be automated by this workflow |
+| Native social apps | Final LinkedIn/WhatsApp/Telegram sending | Be automated by this workflow |
 
 ## Data flow, step by step
 
 1. `workers/cadence_worker.py` queries Attio for People who have a
    relationship owner, are not suppressed, and have no active
    draft/send in progress (`attio/queries.py::eligible_people`).
-2. `recommendations/engine.py::compute_cadence` derives the tier-specific
-   cadence baseline (default 60 days) from `Last meaningful interaction`.
+2. `recommendations/engine.py::is_due` compares now against `Last outreach
+   at` using a flat cadence baseline (`DEFAULT_CADENCE_DAYS`, 60 days) —
+   there is no per-tier cadence concept.
 3. `recommendations/engine.py::build_recommendation` requires an evidence
    item (prior exchange, meeting, shared project, referral, timely
    reason). No evidence → no draft, only a review Note explaining why.
@@ -71,7 +72,7 @@ Delivery reconciliation
        still fully gated by `mailchimp/sync.py::enroll`'s consent checks
        and by the same `RM_ENV=production` + `RM_CONFIRM_PRODUCTION=yes`
        gate the cadence worker uses. Outside that, it's a dry-run.
-     - channel `linkedin`/`whatsapp`/`imessage` →
+     - channel `linkedin`/`whatsapp`/`telegram` →
        `src/review/queue.py::confirm_manual_send`. This system has no API
        access to those channels and never will; the owner sends the
        (possibly rewritten) message themselves on the channel of their
@@ -85,15 +86,18 @@ Delivery reconciliation
 
 ## Setup note: custom fields required in Attio
 
-`src/attio/schema.py` assumes a set of custom fields on the People object
-(`relationship_owner`, `relationship_tier`, `outreach_eligibility`,
-`outreach_status`, `draft_body`, `draft_evidence`, `preferred_channel`,
-`marketing_consent`, `marketing_audience`, `suppression_reason`, etc. —
-full list and types in `docs/attio-schema.md`). As of the first dry run
-against the real Rift Capital workspace (2026-09-14), **none of these
-fields exist yet** — `list-attribute-definitions` on `people` returns only
-Attio's defaults plus enrichment fields (`personae_type`, `signal_source`,
-`strongest_connection_strength`, etc.), and a live filter on
-`outreach_eligibility` fails with "Attribute could not be found". The
-worker and review app will run and correctly find zero eligible/queued
-records until these custom fields are created on the People object.
+Investigation of the real Rift Capital workspace (2026-09-14) found that it
+already has its own overlapping outreach schema — `preferred_channel`,
+`outreach_stage`, `do_not_contact`, `consent_dealflow`, `consent_date`, and
+`last_outreach_at` all already exist and this codebase now reads/writes
+them directly (see `docs/attio-schema.md`). Only four fields are genuinely
+missing and need to be created on the People object before the worker and
+review app can find or queue any records:
+
+- `relationship_owner` (actor reference, single)
+- `draft_body` (text, long)
+- `draft_evidence` (text, long)
+- `review_status` (select: suggested / in_review / approved / sent / archived)
+
+Until these four exist, `eligible_people()` and `list_queue()` will
+correctly return zero records rather than fail loudly.

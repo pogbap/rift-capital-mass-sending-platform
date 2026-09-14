@@ -42,7 +42,7 @@ in_review, or approved) and removes the record from the queue for good;
 it will not be re-suggested later. For `email`, Send attempts a real
 (consent-gated) send once `RM_ENV=production` and
 `RM_CONFIRM_PRODUCTION=yes` are both set; anywhere else it's a dry-run.
-For `linkedin`/`whatsapp`/`imessage` there is no automated send — the
+For `linkedin`/`whatsapp`/`telegram` there is no automated send — the
 button only records that the owner sent the message themselves.
 
 This is a local development server: it only runs while that command is
@@ -55,14 +55,13 @@ small hosted server) that hasn't been set up yet.
 ## Rollback
 
 - The worker only ever writes `suggested`-status recommendations and
-  suppression/consent updates — it does not delete Attio records. To roll
+  do-not-contact updates — it does not delete Attio records. To roll
   back a bad batch, filter Attio by the run's `Draft evidence` timestamp
-  tag and bulk-reset `Outreach status` to `none`.
+  tag and bulk-reset `Review status` to `archived`.
 - Mailchimp enrollments are additive and idempotent; to undo an
   incorrect enrollment, remove the person from the Mailchimp audience
   directly (Mailchimp is the delivery system, not the record of truth —
-  removing them there does not affect Attio, so also clear
-  `marketing_audience` in Attio if the enrollment was a mistake).
+  removing them there does not affect Attio).
 
 ## Incident response
 
@@ -72,7 +71,7 @@ small hosted server) that hasn't been set up yet.
   first, then the Attio approval history on the record.
 - **Consent gate bypassed**: treat as a data-integrity incident. Freeze
   `mailchimp/sync.py::enroll` (feature flag `RM_MAILCHIMP_ENROLL_ENABLED`),
-  audit recent enrollments against `marketing_consent` evidence, and fix
+  audit recent enrollments against `consent_dealflow` evidence, and fix
   forward before re-enabling.
 - **Attio API errors / rate limits**: `attio/client.py` retries with
   exponential backoff and gives up after `RM_MAX_RETRIES` (default 5),

@@ -2,13 +2,13 @@
 
 ## Review and approval
 
-- Every recommendation lands in Attio as `outreach_status = suggested`
+- Every recommendation lands in Attio as `review_status = suggested`
   with its evidence attached. Nothing is sent at this stage.
 - Only the record's `relationship_owner` may move a record to `approved`.
   A material edit to `Draft body` after approval automatically returns
   the record to `in_review` (enforced in `attio/queries.py`) — re-approval
   is required.
-- Social-channel recommendations (LinkedIn/WhatsApp/iMessage) are marked
+- Social-channel recommendations (LinkedIn/WhatsApp/Telegram) are marked
   `sent` only by the owner, only after they have personally sent the
   message in the native app. There is no automated send path for these
   channels — do not build one.
@@ -16,9 +16,9 @@
 ## Consent and Mailchimp
 
 - A person may be enrolled in Mailchimp only when all of the following are
-  true at the same time: `marketing_consent` is recorded with evidence,
-  `marketing_audience` names an approved segment, `outreach_eligibility`
-  is `eligible`, and there is no `suppression_reason`.
+  true at the same time: `consent_dealflow` is checked, an audience_id is
+  configured (`RM_DEFAULT_MAILCHIMP_AUDIENCE_ID`), and the person is not
+  suppressed (`do_not_contact`, or `outreach_stage` in `lost`/`opted_out`).
 - Consent is never inferred from having an email address, from enrichment
   results, or from a prior reply. It must be an explicit, recorded opt-in.
 - Enrollment (`mailchimp/sync.py::enroll`) is idempotent: re-running it
@@ -46,10 +46,9 @@
 
 ## Escalation
 
-- Do-not-contact, unsubscribe, legal-hold, duplicate, and
-  sensitive-contact states always override cadence — if any of these are
-  set, the person is excluded from `eligible_people()` regardless of how
-  overdue their cadence is.
+- `do_not_contact` and an `outreach_stage` of `lost`/`opted_out` always
+  override cadence — if either is set, the person is excluded from
+  `eligible_people()` regardless of how overdue their cadence is.
 - If enrichment (Unipile) returns an ambiguous match, it must not modify
   the record. It creates an Attio review Note instead, for a human to
   resolve.
