@@ -9,6 +9,7 @@ import pytest
 
 from src.review.queue import (
     SendNotAllowedError,
+    archive,
     confirm_manual_send,
     send_email,
 )
@@ -77,3 +78,19 @@ def test_email_send_goes_live_only_with_full_production_confirmation(person_fact
     # (not silently short-circuited back to dry-run).
     with pytest.raises(SendNotAllowedError):
         send_email(FakeAttioClient(), person, email="a@b.com", audience_id="aud_1")
+
+
+def test_archive_is_dry_run_by_default():
+    client = FakeAttioClient()
+    result = archive(client, "rec_123")
+    assert result["dry_run"] is True
+    assert client.updates == []
+
+
+def test_archive_writes_archived_status_when_not_dry_run():
+    client = FakeAttioClient()
+    archive(client, "rec_123", dry_run=False)
+    assert client.updates
+    _, record_id, attributes = client.updates[-1]
+    assert record_id == "rec_123"
+    assert attributes[list(attributes)[0]] == "archived"
