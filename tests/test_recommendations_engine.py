@@ -4,14 +4,14 @@ from src.recommendations.engine import Evidence, build_recommendation, is_due
 
 
 def test_suppressed_person_never_gets_a_recommendation(person_factory):
-    person = person_factory(suppression_reason="unsubscribed")
+    person = person_factory(outreach_stage="opted_out")
     rec = build_recommendation(person, Evidence("meeting", "coffee last week"))
     assert not rec.is_actionable
     assert rec.reason_skipped == "suppressed_or_do_not_contact"
 
 
 def test_do_not_contact_eligibility_is_never_recommended(person_factory):
-    person = person_factory(eligibility="do_not_contact")
+    person = person_factory(do_not_contact=True)
     rec = build_recommendation(person, Evidence("meeting", "coffee last week"))
     assert not rec.is_actionable
     assert rec.reason_skipped == "suppressed_or_do_not_contact"
@@ -20,7 +20,6 @@ def test_do_not_contact_eligibility_is_never_recommended(person_factory):
 def test_not_due_person_is_skipped(person_factory):
     person = person_factory(
         last_meaningful_interaction=dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=5),
-        tier="active",
     )
     rec = build_recommendation(person, Evidence("meeting", "coffee last week"))
     assert not rec.is_actionable
@@ -51,17 +50,17 @@ def test_valid_evidence_and_due_produces_actionable_recommendation(person_factor
     assert rec.channel == "email"
 
 
-def test_unknown_preferred_channel_defaults_to_email(person_factory):
-    person = person_factory(preferred_channel="unknown")
+def test_missing_preferred_channel_defaults_to_email(person_factory):
+    person = person_factory(preferred_channel=None)
     evidence = Evidence("referral", "introduced by a mutual contact")
     rec = build_recommendation(person, evidence)
     assert rec.channel == "email"
 
 
-def test_tier_cadence_override_strategic_is_shorter():
-    from src.attio.schema import cadence_days_for_tier
+def test_default_cadence_is_used_for_everyone():
+    from src.attio.schema import DEFAULT_CADENCE_DAYS, cadence_days_for_tier
 
-    assert cadence_days_for_tier("strategic") < cadence_days_for_tier("nurture")
+    assert cadence_days_for_tier() == DEFAULT_CADENCE_DAYS
 
 
 def test_is_due_true_when_never_interacted(person_factory):

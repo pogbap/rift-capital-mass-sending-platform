@@ -46,7 +46,7 @@ def test_manual_send_records_confirmation_once_approved(person_factory, monkeypa
 
 
 def test_email_send_refused_before_approval(person_factory):
-    person = person_factory(outreach_status="suggested", marketing_consent=True, marketing_audience="clients")
+    person = person_factory(outreach_status="suggested", marketing_consent=True)
     with pytest.raises(SendNotAllowedError):
         send_email(FakeAttioClient(), person, email="a@b.com", audience_id="aud_1")
 
@@ -61,7 +61,7 @@ def test_email_send_is_dry_run_outside_production(person_factory, monkeypatch):
     monkeypatch.delenv("RM_ENV", raising=False)
     monkeypatch.delenv("RM_CONFIRM_PRODUCTION", raising=False)
     person = person_factory(
-        outreach_status="approved", marketing_consent=True, marketing_audience="clients"
+        outreach_status="approved", marketing_consent=True
     )
     result = send_email(FakeAttioClient(), person, email="a@b.com", audience_id="aud_1")
     assert result["dry_run"] is True
@@ -72,7 +72,7 @@ def test_email_send_goes_live_only_with_full_production_confirmation(person_fact
     monkeypatch.setenv("RM_CONFIRM_PRODUCTION", "yes")
     monkeypatch.setenv("RM_MAILCHIMP_ENROLL_ENABLED", "false")  # avoid a real network call in CI
     person = person_factory(
-        outreach_status="approved", marketing_consent=True, marketing_audience="clients"
+        outreach_status="approved", marketing_consent=True
     )
     # Feature-flag off still raises, proving the live path was actually attempted
     # (not silently short-circuited back to dry-run).
