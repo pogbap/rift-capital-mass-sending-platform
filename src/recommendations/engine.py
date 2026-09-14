@@ -52,7 +52,7 @@ def is_due(person: Person, *, now: dt.datetime | None = None, default_days: int 
         # the kind of record that should also be checked for evidence
         # before a draft is actually produced.
         return True
-    days = cadence_days_for_tier(person.tier or "", default_days)
+    days = cadence_days_for_tier(default=default_days)
     elapsed = (now - person.last_meaningful_interaction).days
     return elapsed >= days
 
@@ -72,7 +72,7 @@ def build_recommendation(
         return Recommendation(
             person=person,
             evidence=evidence or Evidence("timely_reason", ""),
-            channel=person.preferred_channel or "unknown",
+            channel=person.preferred_channel or "email",
             draft_body="",
             reason_skipped="suppressed_or_do_not_contact",
         )
@@ -81,7 +81,7 @@ def build_recommendation(
         return Recommendation(
             person=person,
             evidence=evidence or Evidence("timely_reason", ""),
-            channel=person.preferred_channel or "unknown",
+            channel=person.preferred_channel or "email",
             draft_body="",
             reason_skipped="not_due",
         )
@@ -90,12 +90,12 @@ def build_recommendation(
         return Recommendation(
             person=person,
             evidence=evidence or Evidence("timely_reason", ""),
-            channel=person.preferred_channel or "unknown",
+            channel=person.preferred_channel or "email",
             draft_body="",
             reason_skipped="no_evidence",
         )
 
-    channel = person.preferred_channel if person.preferred_channel not in (None, "unknown") else "email"
+    channel = person.preferred_channel or "email"
     draft_body = draft_from_evidence(person, evidence, channel)
 
     return Recommendation(
